@@ -14,7 +14,7 @@ runtime: shiny
 ```{r}
 library(tidyverse)
 source("R/functions.R")
-d <- read_rds("ftp://ftp.hafro.is/pub/data/rds/nsibts-q3.rds")
+d <- read_rds("data-raw/nsibts-q3.rds")
 d$rbyl <- d$rbyl |> mutate(sid = species)
 d$rbl <- d$rbl |> mutate(sid = species)
 d$boot <- d$boot |> mutate(sid = species)
