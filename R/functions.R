@@ -42,28 +42,32 @@ gg_boot <- function(data, SID, ylab = "Fjöldi í togi") {
 
 
 steps <- c(-Inf, -1200, -800, -400, -150, Inf)
-p <-
-  ggplot() +
-  theme_void(base_size = 18) +
-  #theme(legend.position = "none") +
-  scale_x_continuous(expand = expansion(0), breaks = seq(-40, 40, by = 2)) +
-  scale_y_continuous(expand = expansion(0), breaks = seq(50, 80, by = 1))
 
-gg_bubble <- function(data, SID, var, lab = "Fjöldi") {
+
+gg_bubble <- function(data, SID, var, lab = "Fjöldi", cl) {
+
   data <-
     data %>%
     dplyr::filter(year %in% c(2000,
                               2005, 2010, 2014, 2015, 2016, 2017,
                               2018, 2019, 2020, 2021, 2022),
                   sid == SID)
+
+  p <-
+    ggplot() +
+    theme_void(base_size = 18) +
+    #theme(legend.position = "none") +
+    scale_x_continuous(expand = expansion(0), breaks = seq(-40, 40, by = 2)) +
+    scale_y_continuous(expand = expansion(0), breaks = seq(50, 80, by = 1)) +
+    geom_polygon(data = cl, aes(lon, lat, group = group), colour = "grey", fill = "grey") +
+    coord_quickmap(xlim = range(data$lon), ylim = range(data$lat))
+
+
   dummy <-
     data |>
     select(year) |>
     distinct()
-    #ggplot2::ggplot() +
-    #ggplot2::theme_void(base_size = 16) +
-    #ggplot2::geom_sf(data = z, alpha = 0) +
-    #ggplot2::geom_polygon(data = geo::island, ggplot2::aes(lon, lat), fill = "grey") +
+
   p +
     ggplot2::geom_point(data = data,
                         ggplot2::aes(lon, lat, size = {{ var }}),
@@ -80,8 +84,7 @@ gg_bubble <- function(data, SID, var, lab = "Fjöldi") {
     ggplot2::scale_size_area(max_size = 30) +
     ggplot2::labs(x = NULL, y = NULL, size = lab) +
     ggplot2::facet_wrap(~ year, nrow = 3, dir = "v") +
-    theme(strip.text.x = element_blank()) +
-    coord_quickmap()
+    theme(strip.text.x = element_blank())
 }
 
 gg_glyph <- function(data, SID, now.year, z) {
@@ -120,5 +123,4 @@ gg_glyph <- function(data, SID, now.year, z) {
                    legend.position = "none") +
     labs(x = NULL, y = NULL)
 }
-
 

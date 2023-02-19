@@ -13,21 +13,12 @@ runtime: shiny
 
 ```{r}
 library(tidyverse)
-source("R/functions.R")
 d <- read_rds("data-raw/nsibts-q3.rds")
-d$rbyl <- d$rbyl |> mutate(sid = species)
-d$rbl <- d$rbl |> mutate(sid = species)
-d$boot <- d$boot |> mutate(sid = species)
-d$rbys <- d$rbys |> mutate(sid = species)
-
-p <-
-  ggplot() +
-  theme_void(base_size = 15) +
-  theme(legend.position = "none") +
-  scale_x_continuous(expand = expansion(0), breaks = seq(-40, 40, by = 2)) +
-  scale_y_continuous(expand = expansion(0), breaks = seq(50, 80, by = 1))
-
-
+d$rbyl <- d$rbyl |> mutate(sid = latin)
+d$rbl <- d$rbl |> mutate(sid = latin)
+d$boot <- d$boot |> mutate(sid = latin)
+d$rbys <- d$rbys |> mutate(sid = latin)
+source("R/functions.R")
 
 species <- d$species
 names(species) <- species
@@ -64,9 +55,9 @@ Column {data-width=600}
 renderPlot({
   if(input$Type == "Numbers") 
   {
-    gg_length(d$rbl, d$rbyl, input$Species, N, lab = "Mean numbers per tow")
+    gg_length(d$rbl, d$rbyl, input$Species, n, lab = "Mean numbers per tow")
   } else {
-    gg_length(d$rbl, d$rbyl, input$Species, B, lab = "Mean kg per tow")
+    gg_length(d$rbl, d$rbyl, input$Species, b, lab = "Mean kg per tow")
   }
 })
 ```
@@ -94,9 +85,9 @@ renderPlot({
 ```{r}
 renderPlot({
   if(input$Type == "Numbers") {
-    gg_bubble(d$rbys |> filter(year == 2022), input$Species, N) + theme(legend.position = "none")
+    gg_bubble(d$rbys |> filter(year == 2022), input$Species, N, cl = d$cl) + theme(legend.position = "none")
   } else {
-    gg_bubble(d$rbys |> filter(year == 2022), input$Species, B, lab = "Catch [kg]") + theme(legend.position = "Numbers")
+    gg_bubble(d$rbys |> filter(year == 2022), input$Species, B, lab = "Catch [kg]", cl = d$cl) + theme(legend.position = "none")
   }
 })
 ```
@@ -112,9 +103,9 @@ Column {.tabset}
 ```{r}
 renderPlot({
   if(input$Type == "Numbers") {
-    gg_bubble(d$rbys, input$Species, N)
+    gg_bubble(d$rbys, input$Species, N, lab = "Numbers", cl = d$cl)
   } else {
-    gg_bubble(d$rbys, input$Species, B, lab = "Catch [kg]")
+    gg_bubble(d$rbys, input$Species, B, lab = "Catch [kg]", cl = d$cl)
   }
 })
 ```
