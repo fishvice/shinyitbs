@@ -121,4 +121,3 @@ gg_glyph <- function(data, SID, now.year, z) {
     labs(x = NULL, y = NULL)
 }
 
-
