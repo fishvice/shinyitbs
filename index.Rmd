@@ -13,19 +13,78 @@ runtime: shiny
 
 ```{r}
 library(tidyverse)
-d <- read_rds("data-raw/nsibts-q3.rds")
+d <- read_rds("ftp://ftp.hafro.is/pub/data/rds/nsibts-q3.rds")
 d$rbyl <- d$rbyl |> mutate(sid = latin)
 d$rbl <- d$rbl |> mutate(sid = latin)
 d$boot <- d$boot |> mutate(sid = latin)
 d$rbys <- d$rbys |> mutate(sid = latin)
 d$prob <- d$prob |> mutate(sid = latin)
 max.year <- max(d$rbys$year)
-source("R/functions.R")
+# source("R/functions.R")
+gg_length <- function(median, by.year, SID, var, lab = "Fjöldi í hverju lengdarbili") {
+
+  ggplot2::ggplot() +
+    ggplot2::theme_bw(base_size = 14) +
+    ggplot2::geom_ribbon(data = median %>%
+                           dplyr::filter(sid == SID),
+                         ggplot2::aes(length, ymax = {{ var }}, ymin = 0), fill = "grey") +
+    ggplot2::geom_line(data = by.year  %>%
+                         dplyr::filter(sid == SID),
+                       ggplot2::aes(length, {{ var }})) +
+    ggplot2::facet_wrap(~ year, dir = "v", ncol = 3, strip.position = "right") +
+    ggplot2::labs(x = NULL, y = lab) +
+    ggplot2::scale_x_continuous(breaks = seq(10, 200, by = 20)) +
+    guides(x = guide_axis(n.dodge = 2))
+
+}
+
+gg_boot <- function(data, SID, ylab = "Fjöldi í togi") {
+  data %>%
+    dplyr::filter(sid == SID) %>%
+    ggplot2::ggplot(ggplot2::aes(year, mean)) +
+    ggplot2::theme_bw(base_size = 16) +
+    ggplot2::geom_pointrange(ggplot2::aes(year, mean, ymin = lower.ci, ymax = upper.ci)) +
+    ggplot2::scale_x_continuous(breaks = seq(1985, 2025, by = 5)) +
+    ggplot2::expand_limits(y = 0) +
+    ggplot2::labs(x = NULL, y = ylab)
+}
+
+steps <- c(-Inf, -1200, -800, -400, -150, Inf)
+
+
+gg_bubble <- function(data, SID, var, lab = "Fjöldi", cl) {
+
+  data <-
+    data %>%
+    dplyr::filter(year %in% c(2000,
+                              2005, 2010, 2014, 2015, 2016, 2017,
+                              2018, 2019, 2020, 2021, 2022),
+                  sid == SID)
+
+  p <-
+    ggplot() +
+    theme_minimal(base_size = 12) +
+    scale_x_continuous(NULL, NULL, expand = expansion(0)) +
+    scale_y_continuous(NULL, NULL, expand = expansion(0)) +
+    geom_polygon(data = cl, aes(lon, lat, group = group), colour = "grey", fill = "grey") +
+    coord_quickmap(xlim = range(data$lon), ylim = range(data$lat)) +
+    theme(panel.spacing.x=unit(0.3, "lines"),panel.spacing.y=unit(0.3, "lines"))
+
+  p +
+    ggplot2::geom_point(data = data,
+                        ggplot2::aes(lon, lat, size = {{ var }}),
+                        alpha = 0.2, colour = "red") +
+    ggplot2::geom_point(data = data,
+                        ggplot2::aes(lon, lat),
+                        size = 0.1, colour = "blue") +
+    ggplot2::scale_size_area(max_size = 30) +
+    ggplot2::labs(size = lab) +
+    ggplot2::facet_wrap(~ year, nrow = 3, dir = "v") 
+}
 
 species <- d$species
 names(species) <- species
 now.year <- max(d$rbyl$year)
-# xy <- d$rby |> filter(year == now.year) |> select(idx, lon, lat, lon2, lat2) |> distinct()
 ```
 
 

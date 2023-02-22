@@ -3,7 +3,7 @@ library(tidyverse)
 # datadownload and tidy --------------------------------------------------------
 
 if(fs::dir_exists("data-raw") & fs::file_exists("data-raw/nsibts-q3.rds")) {
-  stop("This is not an error and you have what it takes")
+  message("This is not an error and you have what it takes")
 }
 
 fs::dir_create("data-raw")
@@ -43,7 +43,7 @@ st <-
   ungroup()
 # Check if we get a unique id:
 if(!st |> nrow() == st |> distinct(id, .keep_all = TRUE) |> nrow()) {
-  stop("This is unexpected, check the code")
+  warning("This is unexpected, check the code")
 }
 st |>
   group_by(id) |>
@@ -69,17 +69,45 @@ le <-
   filter(n.sum > 0) |>
   select(-n.sum)
 
+# Species to process -----------------------------------------------------------
+# Only species that are reported in at least 15 of the 23 years in question
+LATIN <-
+  le |>
+  group_by(latin) |>
+  summarise(n.year.pos = sum(n_distinct(year))) |>
+  filter(n.year.pos >= 15) |>
+  pull(latin)
+
+
+
 # (rbyl) results by year and length --------------------------------------------
 
 ## A. First the total caught in each length class each year --------------------
 rbyl <-
   le |>
+  filter(latin %in% LATIN) |>
   group_by(year, latin, length) |>
   # the new kid on the block, here summarise returns a warning
   reframe(N = sum(n),                      # total number    by length caught in the year (per 60 minute haul)
           B = sum(n * 0.00001 * length^3)) #       mass [kg]
+
+## trim length of species, make as a "plus group" -------------------------------
+length.trim <-
+  rbyl |>
+  group_by(latin, length) |>
+  reframe(B = sum(B)) |>
+  arrange(latin, length) |>
+  group_by(latin) |>
+  mutate(cB = cumsum(B),
+         cB.trim = 0.98 * max(cB),
+         length.trim = ifelse(length > 30 & cB > cB.trim, NA, length),
+         length.trim = ifelse(!is.na(length.trim), length.trim, max(length.trim, na.rm = TRUE))) |>
+  select(latin, length, length.trim) |>
+  ungroup()
 rbyl <-
   rbyl |>
+  left_join(length.trim) |>
+  mutate(length = length.trim) |>
   # fill in full cm lengths from min to max witin each species
   select(year, latin, length) |> # step not really needed, just added for clarity
   group_by(latin) |>
@@ -111,6 +139,7 @@ rbl <-
 # rbsy --------------------------------------------------------------------------
 rbys <-
   le |>
+  filter(latin %in% LATIN) |>
   group_by(id, year, lon, lat, latin) |>
   reframe(N = sum(n),
           B = sum(n * 0.00001 * length^3))
@@ -158,7 +187,7 @@ boot <-
   bind_rows(boot.N,
             boot.B)
 
-# Probability plot
+# Probability plot -------------------------------------------------------------
 
 prob <-
   rbys |>
@@ -173,10 +202,12 @@ prob <-
                  include.lowest = FALSE)) |>
   filter(!is.na(p))
 
+# Species for ------------------------------------------------------------------
 
 latin <- boot$latin |> unique() |> sort()
 names(latin) <- latin
 
+# Shoreline stuff for background on maps ---------------------------------------
 library(rnaturalearth)
 library(sf)
 bb <- st_bbox(c(xmin = -40, ymin = 27, xmax = 40, ymax = 70),
@@ -192,5 +223,10 @@ cl <-
 
 list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, prob = prob, species = latin, cl = cl) |>
   write_rds("data-raw/nsibts-q3.rds")
+
+list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, prob = prob, species = latin, cl = cl) |>
+  write_rds("/home/ftp/pub/data/rds/nsibts-q3.rds")
+
+
 
 
