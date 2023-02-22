@@ -158,6 +158,21 @@ boot <-
   bind_rows(boot.N,
             boot.B)
 
+# Probability plot
+
+prob <-
+  rbys |>
+  mutate(lon = gisland::grade(lon, 1),
+         lat = gisland::grade(lat, 0.5)) |>
+  group_by(latin, lon, lat) |>
+  summarise(n = n(),
+            n.pos = sum(N > 0),
+            p = n.pos / n * 100,
+            .groups = "drop") |>
+  mutate(p = cut(p, breaks = c(0, 1, seq(10, 100, by = 10)),
+                 include.lowest = FALSE)) |>
+  filter(!is.na(p))
+
 
 latin <- boot$latin |> unique() |> sort()
 names(latin) <- latin
@@ -175,7 +190,7 @@ cl <-
   mutate(group = paste(L1, L2, L3)) |>
   select(lon = X, lat = Y, group)
 
-list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, species = latin, cl = cl) |>
+list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, prob = prob, species = latin, cl = cl) |>
   write_rds("data-raw/nsibts-q3.rds")
 
 

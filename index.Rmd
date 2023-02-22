@@ -18,6 +18,7 @@ d$rbyl <- d$rbyl |> mutate(sid = latin)
 d$rbl <- d$rbl |> mutate(sid = latin)
 d$boot <- d$boot |> mutate(sid = latin)
 d$rbys <- d$rbys |> mutate(sid = latin)
+d$prob <- d$prob |> mutate(sid = latin)
 max.year <- max(d$rbys$year)
 source("R/functions.R")
 
@@ -113,24 +114,21 @@ renderPlot({
 
 ### Probility of capture
 
-```{r, eval = FALSE}
+```{r}
 renderPlot({
-  data <- 
-    d$rbss %>% 
-    dplyr::filter(sid == input$Species) |> 
-    filter(!is.na(p))
-  ggplot() +
-    theme_void(base_size = 16) +
+  tmp <- 
+    d$prob |> 
+    filter(sid == input$Species)
+  
+  tmp |> 
+    ggplot() +
+    theme_void() +
     scale_x_continuous(expand = expansion(mult = 0)) +
     scale_y_continuous(expand = expansion(mult = 0)) +
-    geom_tile(data = data, 
-              aes(lon, lat, fill = p), alpha = 0.7) +
-    geom_segment(data = xy, aes(lon, lat, xend = lon2, yend = lat2), colour = "red", linewidth = 1) +    
-    geom_polygon(data = geo::island, aes(lon, lat), fill = "grey") +
+    geom_raster(aes(lon, lat, fill = p), alpha = 0.7) +
+    geom_polygon(data = d$cl, aes(lon, lat, group = group), colour = "grey", fill = "grey") +
+    coord_quickmap(xlim = range(d$rbys$lon), ylim = range(d$rbys$lat)) +
     scale_fill_viridis_d(option = "B", direction = -1, drop = FALSE) +
-    ggplot2::labs(fill = "Líkindi [%]") +
-    theme(
-          legend.position = "top") +
-    coord_quickmap()
+    labs(fill = "Probability of\ncapture [%]")
 })
 ```
