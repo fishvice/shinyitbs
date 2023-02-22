@@ -18,6 +18,7 @@ d$rbyl <- d$rbyl |> mutate(sid = latin)
 d$rbl <- d$rbl |> mutate(sid = latin)
 d$boot <- d$boot |> mutate(sid = latin)
 d$rbys <- d$rbys |> mutate(sid = latin)
+max.year <- max(d$rbys$year)
 source("R/functions.R")
 
 species <- d$species
@@ -42,7 +43,7 @@ radioButtons(inputId = "Type", label = "Choice:",
 
 Trial stuff - draft explanation (in Icelandic) [here](http://www.hafro.is/~einarhj/skyringar.html).
 
-Main
+Time
 =====================================  
 
 Column {data-width=600}
@@ -80,19 +81,19 @@ renderPlot({
 })
 ```
 
-### Catch in `r now.year`
+### Catch in `r max.year`
 
 ```{r}
 renderPlot({
   if(input$Type == "Numbers") {
-    gg_bubble(d$rbys |> filter(year == 2022), input$Species, N, cl = d$cl) + theme(legend.position = "none")
+    gg_bubble(d$rbys |> filter(year == max.year), input$Species, N, cl = d$cl) + theme(legend.position = "none")
   } else {
-    gg_bubble(d$rbys |> filter(year == 2022), input$Species, B, lab = "Catch [kg]", cl = d$cl) + theme(legend.position = "none")
+    gg_bubble(d$rbys |> filter(year == max.year), input$Species, B, lab = "Catch [kg]", cl = d$cl) + theme(legend.position = "none")
   }
 })
 ```
 
-Spreads
+Space
 =====================================
 
 Column {.tabset}
