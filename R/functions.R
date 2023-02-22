@@ -55,18 +55,19 @@ gg_bubble <- function(data, SID, var, lab = "Fjöldi", cl) {
 
   p <-
     ggplot() +
-    theme_void(base_size = 18) +
+    theme_minimal(base_size = 12) +
     #theme(legend.position = "none") +
-    scale_x_continuous(expand = expansion(0), breaks = seq(-40, 40, by = 2)) +
-    scale_y_continuous(expand = expansion(0), breaks = seq(50, 80, by = 1)) +
+    scale_x_continuous(NULL, NULL, expand = expansion(0)) +
+    scale_y_continuous(NULL, NULL, expand = expansion(0)) +
     geom_polygon(data = cl, aes(lon, lat, group = group), colour = "grey", fill = "grey") +
-    coord_quickmap(xlim = range(data$lon), ylim = range(data$lat))
+    coord_quickmap(xlim = range(data$lon), ylim = range(data$lat)) +
+    theme(panel.spacing.x=unit(0.3, "lines"),panel.spacing.y=unit(0.3, "lines"))
 
 
-  dummy <-
-    data |>
-    select(year) |>
-    distinct()
+  # dummy <-
+  #   data |>
+  #   select(year) |>
+  #   distinct()
 
   p +
     ggplot2::geom_point(data = data,
@@ -76,15 +77,17 @@ gg_bubble <- function(data, SID, var, lab = "Fjöldi", cl) {
                         ggplot2::aes(lon, lat),
                         size = 0.1, colour = "blue") +
     #geom_polygon(data = geo::island, aes(lon, lat), fill = "grey") +
-    ggplot2::geom_text(data = dummy,
-                        aes(label = year),
-                        x = 10, y = 52,
-                       size = 5,
-                       colour = "black") +
+    # ggplot2::geom_text(data = dummy,
+    #                     aes(label = year),
+    #                     # x = 10, y = 52,
+    #                    x = Inf, y = -Inf,
+    #                    vjust = 1, hjust = 1,
+    #                    size = 5,
+    #                    colour = "black") +
     ggplot2::scale_size_area(max_size = 30) +
-    ggplot2::labs(x = NULL, y = NULL, size = lab) +
-    ggplot2::facet_wrap(~ year, nrow = 3, dir = "v") +
-    theme(strip.text.x = element_blank())
+    ggplot2::labs(size = lab) +
+    ggplot2::facet_wrap(~ year, nrow = 3, dir = "v") # +
+    #theme(strip.text.x = element_blank())
 }
 
 gg_glyph <- function(data, SID, now.year, z) {
