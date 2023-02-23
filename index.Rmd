@@ -18,6 +18,14 @@ d$rbyl <- d$rbyl |> mutate(sid = latin)
 d$rbl <- d$rbl |> mutate(sid = latin)
 d$boot <- d$boot |> mutate(sid = latin)
 d$rbys <- d$rbys |> mutate(sid = latin)
+#fix this upstream?
+d$rbys <-
+  d$rbys |>
+  group_by(latin) |>
+  mutate(N = ifelse(N > quantile(N, 0.9999), quantile(N, 0.9999), N),
+         B = ifelse(B > quantile(B, 0.9999), quantile(B, 0.9999), B)) |>
+  ungroup()
+
 d$prob <- d$prob |> mutate(sid = latin)
 xy <- d$rbys |> select(lon, lat) |> distinct()
 max.year <- max(d$rbys$year)
@@ -57,8 +65,9 @@ gg_bubble <- function(data, SID, var, lab = "Fjöldi", cl) {
 
   data <-
     data %>%
-    dplyr::filter(year %in% c(2000,
-                              2005, 2010, 2014, 2015, 2016, 2017,
+    dplyr::filter(year %in% c(2000, 2001, 2002, 2003, 2004, 2005, 2006, 
+                              2007, 2008, 2009,
+                              2010, 2014, 2015, 2016, 2017,
                               2018, 2019, 2020, 2021, 2022),
                   sid == SID)
 

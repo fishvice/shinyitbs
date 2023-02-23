@@ -62,6 +62,7 @@ le <-
   res |>
   bind_rows() |>
   select(id, year, lon, lat, latin, length, n) |>
+  filter(length > 0) |>
   # get rid of species where cpue is always zero
   group_by(latin) |>
   mutate(n.sum = sum(n)) |>
@@ -73,6 +74,8 @@ le <-
 # Only species that are reported in at least 15 of the 23 years in question
 LATIN <-
   le |>
+  filter(length > 0,
+         n > 0) |>
   group_by(latin) |>
   summarise(n.year.pos = sum(n_distinct(year))) |>
   filter(n.year.pos >= 15) |>
@@ -99,7 +102,7 @@ length.trim <-
   arrange(latin, length) |>
   group_by(latin) |>
   mutate(cB = cumsum(B),
-         cB.trim = 0.98 * max(cB),
+         cB.trim = 0.999 * max(cB),
          length.trim = ifelse(length > 30 & cB > cB.trim, NA, length),
          length.trim = ifelse(!is.na(length.trim), length.trim, max(length.trim, na.rm = TRUE))) |>
   select(latin, length, length.trim) |>
@@ -111,7 +114,7 @@ rbyl <-
   # fill in full cm lengths from min to max witin each species
   select(year, latin, length) |> # step not really needed, just added for clarity
   group_by(latin) |>
-  expand(year = full_seq(year, 1),
+  expand(year = full_seq(c(2000, 2022), 1),
          length = full_seq(length, 1)) |>
   # join back to get the N and B
   left_join(rbyl) |>
@@ -226,7 +229,4 @@ list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, prob = prob, species = la
 
 list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, prob = prob, species = latin, cl = cl) |>
   write_rds("/home/ftp/pub/data/rds/nsibts-q3.rds")
-
-
-
 
