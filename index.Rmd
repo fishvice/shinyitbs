@@ -19,6 +19,7 @@ d$rbl <- d$rbl |> mutate(sid = latin)
 d$boot <- d$boot |> mutate(sid = latin)
 d$rbys <- d$rbys |> mutate(sid = latin)
 d$prob <- d$prob |> mutate(sid = latin)
+xy <- d$rbys |> select(lon, lat) |> distinct()
 max.year <- max(d$rbys$year)
 # source("R/functions.R")
 gg_length <- function(median, by.year, SID, var, lab = "Fjöldi í hverju lengdarbili") {
@@ -185,6 +186,7 @@ renderPlot({
     scale_x_continuous(expand = expansion(mult = 0)) +
     scale_y_continuous(expand = expansion(mult = 0)) +
     geom_raster(aes(lon, lat, fill = p), alpha = 0.7) +
+    geom_point(data = xy, aes(lon, lat), size = 0.1, colour = "blue") +
     geom_polygon(data = d$cl, aes(lon, lat, group = group), colour = "grey", fill = "grey") +
     coord_quickmap(xlim = range(d$rbys$lon), ylim = range(d$rbys$lat)) +
     scale_fill_viridis_d(option = "B", direction = -1, drop = FALSE) +
