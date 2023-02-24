@@ -41,6 +41,10 @@ st <-
   group_by(year) |>
   mutate(n.tows = n_distinct(id)) |>
   ungroup()
+
+year.min <- min(st$year)
+year.max <- max(st$year)
+
 # Check if we get a unique id:
 if(!st |> nrow() == st |> distinct(id, .keep_all = TRUE) |> nrow()) {
   warning("This is unexpected, check the code")
@@ -128,7 +132,7 @@ rbyl <-
   # fill in full cm lengths from min to max witin each species
   select(year, latin, length) |> # step not really needed, just added for clarity
   group_by(latin) |>
-  expand(year = full_seq(c(2000, 2022), 1),
+  expand(year = full_seq(c(year.min, year.max), 1),
          length = full_seq(length, 1)) |>
   # join back to get the N and B
   left_join(rbyl) |>
@@ -227,7 +231,7 @@ glyph <-
             B = mean(B),
             .groups = "drop")
 glyph <-
-  expand_grid(year = 1999:2023,
+  expand_grid(year = (year.min - 1):(year.max + 1),
               sq = unique(glyph$sq),
               latin = unique(glyph$latin)) |>
   left_join(glyph) |>
