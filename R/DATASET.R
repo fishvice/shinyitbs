@@ -72,16 +72,30 @@ le <-
 
 # Species to process -----------------------------------------------------------
 # Only species that are reported in at least 15 of the 23 years in question
-LATIN <-
+species_table <-
   le |>
   filter(length > 0,
          n > 0) |>
   group_by(latin) |>
   summarise(n.year.pos = sum(n_distinct(year))) |>
   filter(n.year.pos >= 15) |>
-  pull(latin)
-
-
+  # only proper species, not genus
+  filter(str_detect(latin, " ")) |>
+  left_join(tidydatras::asfis) |>
+  mutate(english_name = case_when(species == "PLA" ~ "Long rough dab",
+                                  species == "MON" ~ "Monkfish",
+                                  species == "WHB" ~ "Blue whiting",
+                                  species == "PIL" ~ "Sardine",
+                                  species == "LUM" ~ "Lumpfish",
+                                  species == "BIB" ~ "Pouting",
+                                  species == "POK" ~ "Saithe",
+                                  species == "USK" ~ "Tusk",
+                                  .default = english_name)) |>
+  arrange(english_name)
+# testing:
+species_table |> count(english_name) |> filter(n > 1)
+LATIN <- species_table$latin
+names(LATIN) <- species_table$english_name
 
 # (rbyl) results by year and length --------------------------------------------
 
@@ -130,7 +144,7 @@ rbyl <-
   select(-n.tows)
 
 # average over the whole survey time period
-# results by length, used in the length frequency plot ----------------------b--
+# results by length, used in the length frequency plot -------------------------
 rbl <-
   rbyl |>
   group_by(latin, length) |>
@@ -138,6 +152,14 @@ rbl <-
           B = mean(B),
           n = mean(n),
           b = mean(b))
+
+# Throw out variables that are not used downstream to speed up the shiny loading
+rbyl <-
+  rbyl |>
+  select(latin, year, length, n, b)
+rbl <-
+  rbl |>
+  select(latin, length, n, b)
 
 # rbsy --------------------------------------------------------------------------
 rbys <-
@@ -190,6 +212,39 @@ boot <-
   bind_rows(boot.N,
             boot.B)
 
+# Throw out variables that are not used downstream to speed up the shiny loading
+boot <-
+  boot |>
+  select(-n)
+
+# gplyph plot ------------------------------------------------------------------
+# need to create a dummy year before and after for the glyph-plot
+glyph <-
+  rbys |>
+  mutate(sq = geo::d2ir(lat, lon)) |>
+  group_by(year, sq, latin) |>
+  summarise(N = mean(N),
+            B = mean(B),
+            .groups = "drop")
+glyph <-
+  expand_grid(year = 1999:2023,
+              sq = unique(glyph$sq),
+              latin = unique(glyph$latin)) |>
+  left_join(glyph) |>
+  mutate(N = replace_na(N, 0),
+         B = replace_na(B, 0)) |>
+  mutate(lon = geo::ir2d(sq)$lon,
+         lat = geo::ir2d(sq)$lat) |>
+  group_by(year, latin) |>
+  mutate(N = ifelse(N > quantile(N, 0.975), quantile(N, 0.975), N),
+         B = ifelse(B > quantile(B, 0.975), quantile(B, 0.975), B)) |>
+  ungroup()
+# Throw out variables that are not used downstream to speed up the shiny loading
+glyph <-
+  glyph |>
+  select(-sq)
+
+
 # Probability plot -------------------------------------------------------------
 
 prob <-
@@ -205,10 +260,7 @@ prob <-
                  include.lowest = FALSE)) |>
   filter(!is.na(p))
 
-# Species for ------------------------------------------------------------------
 
-latin <- boot$latin |> unique() |> sort()
-names(latin) <- latin
 
 # Shoreline stuff for background on maps ---------------------------------------
 library(rnaturalearth)
@@ -224,9 +276,9 @@ cl <-
   mutate(group = paste(L1, L2, L3)) |>
   select(lon = X, lat = Y, group)
 
-list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, prob = prob, species = latin, cl = cl) |>
+list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, glyph = glyph, prob = prob, species = LATIN, cl = cl) |>
   write_rds("data-raw/nsibts-q3.rds")
 
-list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, prob = prob, species = latin, cl = cl) |>
+list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot,  glyph = glyph, prob = prob, species = LATIN, cl = cl) |>
   write_rds("/home/ftp/pub/data/rds/nsibts-q3.rds")
 
