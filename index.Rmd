@@ -92,7 +92,7 @@ gg_bubble <- function(data, SID, var, lab = "Fjöldi", cl) {
                         size = 0.1, colour = "blue") +
     ggplot2::scale_size_area(max_size = 30) +
     ggplot2::labs(size = lab) +
-    ggplot2::facet_wrap(~ year, nrow = 3, dir = "v") 
+    ggplot2::facet_wrap(~ year, nrow = 3, dir = "h") 
 }
 
 
