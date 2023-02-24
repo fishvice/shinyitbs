@@ -235,9 +235,9 @@ Column {data-width=600}
 renderPlot({
   if(input$Type == "Numbers") 
   {
-    gg_length(d$rbl, d$rbyl, input$Species, n, lab = "Mean numbers per tow")
+    gg_length(d$rbl, d$rbyl, input$Species, n, lab = "Mean numbers per tow") + labs(caption = "What should be put here?")
   } else {
-    gg_length(d$rbl, d$rbyl, input$Species, b, lab = "Mean kg per tow")
+    gg_length(d$rbl, d$rbyl, input$Species, b, lab = "Mean kg per tow") + labs(caption = "What should be put here?")
   }
 })
 ```
@@ -253,9 +253,9 @@ Column {data-width=400}
 renderPlot({
   if(input$Type == "Numbers") 
   {
-    gg_boot(d$boot |> filter(var == "N"), input$Species, ylab = "Numbers per hour")
+    gg_boot(d$boot |> filter(var == "N"), input$Species, ylab = "Numbers per hour") + labs(caption = "What should be put here?")
   } else {
-    gg_boot(d$boot |> filter(var == "B"), input$Species, ylab = "Kg per hour")  
+    gg_boot(d$boot |> filter(var == "B"), input$Species, ylab = "Kg per hour") + labs(caption = "What should be put here?") 
   }
 })
 ```
@@ -265,9 +265,9 @@ renderPlot({
 ```{r}
 renderPlot({
   if(input$Type == "Numbers") {
-    gg_bubble(d$rbys |> filter(year == max.year), input$Species, N, cl = d$cl) + theme(legend.position = "none")
+    gg_bubble(d$rbys |> filter(year == max.year), input$Species, N, cl = d$cl) + theme(legend.position = "none") + labs(caption = "What should be put here?")
   } else {
-    gg_bubble(d$rbys |> filter(year == max.year), input$Species, B, lab = "Catch [kg]", cl = d$cl) + theme(legend.position = "none")
+    gg_bubble(d$rbys |> filter(year == max.year), input$Species, B, lab = "Catch [kg]", cl = d$cl) + theme(legend.position = "none") + labs(caption = "What should be put here?")
   }
 })
 ```
@@ -283,9 +283,9 @@ Column {.tabset}
 ```{r}
 renderPlot({
   if(input$Type == "Numbers") {
-    gg_bubble(d$rbys, input$Species, N, lab = "Numbers", cl = d$cl)
+    gg_bubble(d$rbys, input$Species, N, lab = "Numbers", cl = d$cl) + labs(caption = "What should be put here?")
   } else {
-    gg_bubble(d$rbys, input$Species, B, lab = "Catch [kg]", cl = d$cl)
+    gg_bubble(d$rbys, input$Species, B, lab = "Catch [kg]", cl = d$cl) + labs(caption = "What should be put here?")
   }
 })
 ```
@@ -295,9 +295,9 @@ renderPlot({
 ```{r}
 renderPlot({
   if(input$Type == "Numbers") {
-    d$glyph |> rename(Y = N) |> gg_glyph(input$Species, now.year) + coord_quickmap(xlim = range(d$rbys$lon), ylim = range(d$rbys$lat))
+    d$glyph |> rename(Y = N) |> gg_glyph(input$Species, now.year) + coord_quickmap(xlim = range(d$rbys$lon), ylim = range(d$rbys$lat)) + labs(caption = "What should be put here?")
   } else {
-    d$glyph |> rename(Y = B) |> gg_glyph(input$Species, now.year) + coord_quickmap(xlim = range(d$rbys$lon), ylim = range(d$rbys$lat))
+    d$glyph |> rename(Y = B) |> gg_glyph(input$Species, now.year) + coord_quickmap(xlim = range(d$rbys$lon), ylim = range(d$rbys$lat)) + labs(caption = "What should be put here?")
   }
 })
 ```
@@ -320,7 +320,8 @@ renderPlot({
     geom_polygon(data = d$cl, aes(lon, lat, group = group), colour = "grey", fill = "grey") +
     coord_quickmap(xlim = range(d$rbys$lon), ylim = range(d$rbys$lat)) +
     scale_fill_viridis_d(option = "B", direction = -1, drop = FALSE) +
-    labs(fill = "Probability of\ncapture [%]")
+    labs(fill = "Probability of\ncapture [%]") + 
+    labs(caption = "What should be put here?")
 })
 ```
 
