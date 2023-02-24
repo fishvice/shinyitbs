@@ -218,6 +218,10 @@ radioButtons(inputId = "Type", label = "Choice:",
 
 Trial stuff - draft explanation (in Icelandic) [here](http://www.hafro.is/~einarhj/skyringar.html).
 
+SOURCE: ICES Database on Trawl Surveys (DATRAS), 2023, ICES, Copenhagen, Denmark. [https://datras.ices.dk](https://datras.ices.dk)
+
+
+
 Time
 =====================================  
 
@@ -322,3 +326,40 @@ renderPlot({
 
 About the doodle
 ===================================== 
+
+Column {.tabset}
+-------------------------------------
+
+### The data source
+
+***
+
+Something nice about the DATRAS
+
+- ...
+
+- ...
+
+- ...
+
+- ...
+
+### The time panel
+
+***
+
+Here possibly a snapshot of an illustrative species, explaining how to read the graph
+
+### The space panel
+
+
+***
+
+Here possibly a snapshot of an illustrative species, explaining how to read the graph
+
+### Method
+
+
+***
+
+Very brief points on methods with then link to more detailed documentation
