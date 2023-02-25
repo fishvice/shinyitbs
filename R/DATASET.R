@@ -1,35 +1,54 @@
 library(tidyverse)
+FROM_RAW <- TRUE
 
 # datadownload and tidy --------------------------------------------------------
 
-if(fs::dir_exists("data-raw") & fs::file_exists("data-raw/nsibts-q3.rds")) {
-  message("This is not an error and you have what it takes")
+## VIA RAW ---------------------------------------------------------------------
+if(FROM_RAW) {
+  ns <-
+    read_rds("~/stasi/datras/data-raw/cpue_tidydatras/ns-ibts_cpue.rds") |>
+    filter(year >= 2000, quarter == 3) |>
+    mutate(survey = paste0(survey, "_", quarter),
+           year = as.integer(year))
+  fr <-
+    read_rds("~/stasi/datras/data-raw/cpue_tidydatras/fr-cgfs_cpue.rds") |>
+    filter(year >= 2000, quarter == 4) |>
+    mutate(survey = paste0(survey, "_", quarter),
+           year = as.integer(year))
+  res <- bind_rows(ns, fr)
 }
 
-fs::dir_create("data-raw")
-library(icesDatras)
-years <- 2000:2022
-qs <- 3
-surveys <- "NS-IBTS"
+## Via icesDatras::getCPUELength -----------------------------------------------
+if(!FROM_RAW) {
+  if(fs::dir_exists("data-raw") & fs::file_exists("data-raw/nsibts-q3.rds")) {
+    message("This is not an error and you have what it takes")
+  }
 
-res <- list()
-for(y in 1:length(years)) {
-  print(years[y])
-  res[[y]] <-
-    getCPUELength(surveys, year = years[y], quarter = qs) |>
-    as_tibble() |>
-    rename_all(tolower) |>
-    unite("id", survey, year, quarter, ship, gear, haulno, subarea, remove = FALSE) |>
-    mutate(survey = paste0(survey, "_", quarter)) |>
-    select(survey, id, year, lon = shootlon, lat = shootlat, latin = species,
-           length = lngtclas, n = cpue_number_per_hour) |>
-    mutate(length = as.integer(floor(length / 10))) |>
-    group_by(survey, id, year, lon, lat, latin, length) |>
-    summarise(n = sum(n),
-              .groups = "drop")
+  fs::dir_create("data-raw")
+  library(icesDatras)
+  years <- 2000:2022
+  qs <- 3
+  surveys <- "NS-IBTS"
+
+  res <- list()
+  for(y in 1:length(years)) {
+    print(years[y])
+    res[[y]] <-
+      getCPUELength(surveys, year = years[y], quarter = qs) |>
+      as_tibble() |>
+      rename_all(tolower) |>
+      unite("id", survey, year, quarter, ship, gear, haulno, subarea, remove = FALSE) |>
+      mutate(survey = paste0(survey, "_", quarter)) |>
+      select(survey, id, year, lon = shootlon, lat = shootlat, latin = species,
+             length = lngtclas, n = cpue_number_per_hour) |>
+      mutate(length = as.integer(floor(length / 10))) |>
+      group_by(survey, id, year, lon, lat, latin, length) |>
+      summarise(n = sum(n),
+                .groups = "drop")
+  }
+  # res |> write_rds("tmp.rds")
+  res <- read_rds("tmp.rds")
 }
-# res |> write_rds("tmp.rds")
-# res <- read_rds("tmp.rds")
 
 
 
@@ -69,6 +88,13 @@ le <-
   bind_rows() |>
   select(survey, id, year, lon, lat, latin, length, n) |>
   filter(length > 0) |>
+  # CHECK upstream why one has NA in n
+  mutate(n = replace_na(n, 0)) |>
+  # I thought this was done upstream
+  mutate(length = floor(length)) |>
+  group_by(survey, id, year, lon, lat, latin, length) |>
+  summarise(n = sum(n),
+            .groups = "drop") |>
   # get rid of species where cpue is always zero
   group_by(survey, latin) |>
   mutate(n.sum = sum(n)) |>
@@ -89,6 +115,8 @@ species_table <-
   filter(n.year.pos >= 15) |>
   # only proper species, not genus
   filter(str_detect(latin, " ")) |>
+  select(latin) |>
+  distinct() |>
   left_join(tidydatras::asfis) |>
   mutate(english_name = case_when(species == "PLA" ~ "Long rough dab",
                                   species == "MON" ~ "Monkfish",
@@ -102,6 +130,7 @@ species_table <-
   arrange(english_name)
 # testing:
 species_table |> count(english_name) |> filter(n > 1)
+
 LATIN <- species_table$latin
 names(LATIN) <- species_table$english_name
 
@@ -286,7 +315,7 @@ cl <-
   select(lon = X, lat = Y, group)
 
 list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, glyph = glyph, prob = prob, species = LATIN, cl = cl) |>
-  write_rds("data-raw/nsibts-q3.rds")
+  write_rds("data-raw/cpue.rds")
 
 # list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot,  glyph = glyph, prob = prob, species = LATIN, cl = cl) |>
 #   write_rds("/home/ftp/pub/data/rds/nsibts-q3.rds")

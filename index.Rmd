@@ -14,7 +14,7 @@ runtime: shiny
 ```{r}
 library(tidyverse)
 #d <- read_rds("ftp://ftp.hafro.is/pub/data/rds/nsibts-q3.rds")
-d <- read_rds("data-raw/nsibts-q3.rds")
+d <- read_rds("data-raw/cpue.rds")
 d$rbyl <- d$rbyl |> mutate(sid = latin)
 d$rbl <- d$rbl |> mutate(sid = latin)
 d$boot <- d$boot |> mutate(sid = latin)
