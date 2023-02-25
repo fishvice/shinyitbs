@@ -2,9 +2,6 @@ library(tidyverse)
 
 # datadownload and tidy --------------------------------------------------------
 
-if(fs::dir_exists("data-raw") & fs::file_exists("data-raw/nsibts-q3.rds")) {
-  message("This is not an error and you have what it takes")
-}
 
 fs::dir_create("data-raw")
 library(icesDatras)
@@ -281,8 +278,9 @@ cl <-
   select(lon = X, lat = Y, group)
 
 list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, glyph = glyph, prob = prob, species = LATIN, cl = cl) |>
-  write_rds("data-raw/nsibts-q3.rds")
+  write_rds("data-raw/NS-IBTS_3.rds")
 
 list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot,  glyph = glyph, prob = prob, species = LATIN, cl = cl) |>
-  write_rds("/home/ftp/pub/data/rds/nsibts-q3.rds")
+  write_rds("/home/ftp/pub/data/rds/NS-IBTS_3.rds")
+system("chmod a+rX /home/ftp/pub/data/rds/NS-IBTS_3.rds")
 
