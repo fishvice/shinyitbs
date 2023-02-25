@@ -13,7 +13,8 @@ runtime: shiny
 
 ```{r}
 library(tidyverse)
-d <- read_rds("ftp://ftp.hafro.is/pub/data/rds/nsibts-q3.rds")
+#d <- read_rds("ftp://ftp.hafro.is/pub/data/rds/nsibts-q3.rds")
+d <- read_rds("data-raw/nsibts-q3.rds")
 d$rbyl <- d$rbyl |> mutate(sid = latin)
 d$rbl <- d$rbl |> mutate(sid = latin)
 d$boot <- d$boot |> mutate(sid = latin)
@@ -31,15 +32,15 @@ d$prob <- d$prob |> mutate(sid = latin)
 xy <- d$rbys |> select(lon, lat) |> distinct()
 max.year <- max(d$rbys$year)
 # source("R/functions.R")
-gg_length <- function(median, by.year, SID, var, lab = "Fjöldi í hverju lengdarbili") {
+gg_length <- function(median, by.year, SUR, SID, var, lab = "Fjöldi í hverju lengdarbili") {
   
   ggplot2::ggplot() +
     ggplot2::theme_bw(base_size = 14) +
     ggplot2::geom_ribbon(data = median %>%
-                           dplyr::filter(sid == SID),
+                           dplyr::filter(survey == SUR, sid == SID),
                          ggplot2::aes(length, ymax = {{ var }}, ymin = 0), fill = "grey") +
     ggplot2::geom_line(data = by.year  %>%
-                         dplyr::filter(sid == SID),
+                         dplyr::filter(survey == SUR, sid == SID),
                        ggplot2::aes(length, {{ var }})) +
     ggplot2::facet_wrap(~ year, dir = "v", ncol = 3, strip.position = "right") +
     ggplot2::labs(x = NULL, y = lab) +
@@ -48,9 +49,9 @@ gg_length <- function(median, by.year, SID, var, lab = "Fjöldi í hverju lengda
   
 }
 
-gg_boot <- function(data, SID, ylab = "Fjöldi í togi") {
+gg_boot <- function(data, SUR, SID, ylab = "Fjöldi í togi") {
   data %>%
-    dplyr::filter(sid == SID) %>%
+    dplyr::filter(survey == SUR, sid == SID) %>%
     ggplot2::ggplot(ggplot2::aes(year, mean)) +
     ggplot2::theme_bw(base_size = 16) +
     ggplot2::geom_pointrange(ggplot2::aes(year, mean, ymin = lower.ci, ymax = upper.ci)) +
@@ -62,7 +63,7 @@ gg_boot <- function(data, SID, ylab = "Fjöldi í togi") {
 steps <- c(-Inf, -1200, -800, -400, -150, Inf)
 
 
-gg_bubble <- function(data, SID, var, lab = "Fjöldi", cl) {
+gg_bubble <- function(data, SUR, SID, var, lab = "Fjöldi", cl) {
   
   data <-
     data %>%
@@ -72,6 +73,7 @@ gg_bubble <- function(data, SID, var, lab = "Fjöldi", cl) {
                               2011, 2012, 2013, 2014, 2015, 
                               2016, 2017, 2018, 2019, 2020, 
                               2021, 2022),
+                  survey == SUR,
                   sid == SID)
   
   p <-
@@ -162,14 +164,14 @@ glyphs <- function (data, x_major, x_minor, y_major, y_minor, polar = FALSE,
 }
 
 
-gg_glyph <- function(data, SID, now.year) {
+gg_glyph <- function(data, SUR, SID, now.year) {
 
   # add a year before and after
 
 
   n.glyph <-
     data |>
-    dplyr::filter(sid == SID) %>%
+    dplyr::filter(survey == SUR, sid == SID) %>%
     glyphs(x_major = "lon",
                    y_major = "lat",
                    x_minor = "year",
@@ -197,7 +199,8 @@ gg_glyph <- function(data, SID, now.year) {
     labs(x = NULL, y = NULL)
 }
 
-
+surveys <- d$boot$survey |> unique()
+names(surveys) <- surveys
 species <- d$species
 now.year <- max(d$rbyl$year)
 ```
@@ -207,6 +210,9 @@ Sidebar {.sidebar data-width=175}
 =====================================
 
 ```{r}
+selectInput(inputId = "Survey", label = "Survey:",
+            choices = surveys, selected = "NS-IBTS_3")
+
 selectInput(inputId = "Species", label = "Species:",
             choices = species, selected = "Gadus morhua")
 
@@ -235,9 +241,9 @@ Column {data-width=600}
 renderPlot({
   if(input$Type == "Numbers") 
   {
-    gg_length(d$rbl, d$rbyl, input$Species, n, lab = "Mean numbers per tow") + labs(caption = "What should be put here?")
+    gg_length(d$rbl, d$rbyl, input$Survey, input$Species, n, lab = "Mean numbers per tow") + labs(caption = "What should be put here?")
   } else {
-    gg_length(d$rbl, d$rbyl, input$Species, b, lab = "Mean kg per tow") + labs(caption = "What should be put here?")
+    gg_length(d$rbl, d$rbyl, input$Survey, input$Species, b, lab = "Mean kg per tow") + labs(caption = "What should be put here?")
   }
 })
 ```
@@ -253,9 +259,9 @@ Column {data-width=400}
 renderPlot({
   if(input$Type == "Numbers") 
   {
-    gg_boot(d$boot |> filter(var == "N"), input$Species, ylab = "Numbers per hour") + labs(caption = "What should be put here?")
+    gg_boot(d$boot |> filter(var == "N"), input$Survey, input$Species, ylab = "Numbers per hour") + labs(caption = "What should be put here?")
   } else {
-    gg_boot(d$boot |> filter(var == "B"), input$Species, ylab = "Kg per hour") + labs(caption = "What should be put here?") 
+    gg_boot(d$boot |> filter(var == "B"), input$Survey, input$Species, ylab = "Kg per hour") + labs(caption = "What should be put here?") 
   }
 })
 ```
@@ -265,9 +271,9 @@ renderPlot({
 ```{r}
 renderPlot({
   if(input$Type == "Numbers") {
-    gg_bubble(d$rbys |> filter(year == max.year), input$Species, N, cl = d$cl) + theme(legend.position = "none") + labs(caption = "What should be put here?")
+    gg_bubble(d$rbys |> filter(year == max.year), input$Survey, input$Species, N, cl = d$cl) + theme(legend.position = "none") + labs(caption = "What should be put here?")
   } else {
-    gg_bubble(d$rbys |> filter(year == max.year), input$Species, B, lab = "Catch [kg]", cl = d$cl) + theme(legend.position = "none") + labs(caption = "What should be put here?")
+    gg_bubble(d$rbys |> filter(year == max.year), input$Survey, input$Species, B, lab = "Catch [kg]", cl = d$cl) + theme(legend.position = "none") + labs(caption = "What should be put here?")
   }
 })
 ```
@@ -283,9 +289,9 @@ Column {.tabset}
 ```{r}
 renderPlot({
   if(input$Type == "Numbers") {
-    gg_bubble(d$rbys, input$Species, N, lab = "Numbers", cl = d$cl) + labs(caption = "What should be put here?")
+    gg_bubble(d$rbys, input$Survey, input$Species, N, lab = "Numbers", cl = d$cl) + labs(caption = "What should be put here?")
   } else {
-    gg_bubble(d$rbys, input$Species, B, lab = "Catch [kg]", cl = d$cl) + labs(caption = "What should be put here?")
+    gg_bubble(d$rbys, input$Survey, input$Species, B, lab = "Catch [kg]", cl = d$cl) + labs(caption = "What should be put here?")
   }
 })
 ```
@@ -295,9 +301,9 @@ renderPlot({
 ```{r}
 renderPlot({
   if(input$Type == "Numbers") {
-    d$glyph |> rename(Y = N) |> gg_glyph(input$Species, now.year) + coord_quickmap(xlim = range(d$rbys$lon), ylim = range(d$rbys$lat)) + labs(caption = "What should be put here?")
+    d$glyph |> rename(Y = N) |> gg_glyph(input$Survey, input$Species, now.year) + coord_quickmap(xlim = range(d$rbys$lon), ylim = range(d$rbys$lat)) + labs(caption = "What should be put here?")
   } else {
-    d$glyph |> rename(Y = B) |> gg_glyph(input$Species, now.year) + coord_quickmap(xlim = range(d$rbys$lon), ylim = range(d$rbys$lat)) + labs(caption = "What should be put here?")
+    d$glyph |> rename(Y = B) |> gg_glyph(input$Survey, input$Species, now.year) + coord_quickmap(xlim = range(d$rbys$lon), ylim = range(d$rbys$lat)) + labs(caption = "What should be put here?")
   }
 })
 ```
@@ -308,7 +314,7 @@ renderPlot({
 renderPlot({
   tmp <- 
     d$prob |> 
-    filter(sid == input$Species)
+    filter(survey == input$Survey, sid == input$Species)
   
   tmp |> 
     ggplot() +

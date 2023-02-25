@@ -20,10 +20,11 @@ for(y in 1:length(years)) {
     as_tibble() |>
     rename_all(tolower) |>
     unite("id", survey, year, quarter, ship, gear, haulno, subarea, remove = FALSE) |>
-    select(id, year, lon = shootlon, lat = shootlat, latin = species,
+    mutate(survey = paste0(survey, "_", quarter)) |>
+    select(survey, id, year, lon = shootlon, lat = shootlat, latin = species,
            length = lngtclas, n = cpue_number_per_hour) |>
     mutate(length = as.integer(floor(length / 10))) |>
-    group_by(id, year, lon, lat, latin, length) |>
+    group_by(survey, id, year, lon, lat, latin, length) |>
     summarise(n = sum(n),
               .groups = "drop")
 }
@@ -36,12 +37,13 @@ for(y in 1:length(years)) {
 st <-
   res |>
   bind_rows() |>
-  select(id, year, lon, lat) |>
+  select(survey, id, year, lon, lat) |>
   distinct() |>
-  group_by(year) |>
+  group_by(survey, year) |>
   mutate(n.tows = n_distinct(id)) |>
   ungroup()
 
+# may need to generate this for each survey
 year.min <- min(st$year)
 year.max <- max(st$year)
 
@@ -50,7 +52,7 @@ if(!st |> nrow() == st |> distinct(id, .keep_all = TRUE) |> nrow()) {
   warning("This is unexpected, check the code")
 }
 st |>
-  group_by(id) |>
+  group_by(survey, id) |>
   mutate(n.id = n()) |>
   filter(n.id > 1) |>
   glimpse()
@@ -58,17 +60,17 @@ st |>
 # remedy for now: drop one of the dual
 st <-
   st |>
-  group_by(id) |>
+  group_by(survey, id) |>
   slice(1) |>
   ungroup()
 
 le <-
   res |>
   bind_rows() |>
-  select(id, year, lon, lat, latin, length, n) |>
+  select(survey, id, year, lon, lat, latin, length, n) |>
   filter(length > 0) |>
   # get rid of species where cpue is always zero
-  group_by(latin) |>
+  group_by(survey, latin) |>
   mutate(n.sum = sum(n)) |>
   ungroup() |>
   filter(n.sum > 0) |>
@@ -80,8 +82,10 @@ species_table <-
   le |>
   filter(length > 0,
          n > 0) |>
-  group_by(latin) |>
-  summarise(n.year.pos = sum(n_distinct(year))) |>
+  # NOTE: Should one have different species list for different surveys
+  group_by(survey, latin) |>
+  summarise(n.year.pos = sum(n_distinct(year)),
+            .groups = "drop") |>
   filter(n.year.pos >= 15) |>
   # only proper species, not genus
   filter(str_detect(latin, " ")) |>
@@ -107,7 +111,7 @@ names(LATIN) <- species_table$english_name
 rbyl <-
   le |>
   filter(latin %in% LATIN) |>
-  group_by(year, latin, length) |>
+  group_by(survey, year, latin, length) |>
   # the new kid on the block, here summarise returns a warning
   reframe(N = sum(n),                      # total number    by length caught in the year (per 60 minute haul)
           B = sum(n * 0.00001 * length^3)) #       mass [kg]
@@ -130,8 +134,8 @@ rbyl <-
   left_join(length.trim) |>
   mutate(length = length.trim) |>
   # fill in full cm lengths from min to max witin each species
-  select(year, latin, length) |> # step not really needed, just added for clarity
-  group_by(latin) |>
+  select(survey, year, latin, length) |> # step not really needed, just added for clarity
+  group_by(survey, latin) |>
   expand(year = full_seq(c(year.min, year.max), 1),
          length = full_seq(length, 1)) |>
   # join back to get the N and B
@@ -142,7 +146,7 @@ rbyl <-
 ## B. Now the calculation of the mean per length per year ----------------------
 rbyl <-
   rbyl |>
-  left_join(st |> count(year, name = "n.tows")) |>
+  left_join(st |> count(survey, year, name = "n.tows")) |>
   mutate(n = N / n.tows,
          b = B / n.tows) |>
   select(-n.tows)
@@ -151,7 +155,7 @@ rbyl <-
 # results by length, used in the length frequency plot -------------------------
 rbl <-
   rbyl |>
-  group_by(latin, length) |>
+  group_by(survey, latin, length) |>
   reframe(N = mean(N),
           B = mean(B),
           n = mean(n),
@@ -160,22 +164,22 @@ rbl <-
 # Throw out variables that are not used downstream to speed up the shiny loading
 rbyl <-
   rbyl |>
-  select(latin, year, length, n, b)
+  select(survey, latin, year, length, n, b)
 rbl <-
   rbl |>
-  select(latin, length, n, b)
+  select(survey, latin, length, n, b)
 
 # rbsy --------------------------------------------------------------------------
 rbys <-
   le |>
   filter(latin %in% LATIN) |>
-  group_by(id, year, lon, lat, latin) |>
+  group_by(survey, id, year, lon, lat, latin) |>
   reframe(N = sum(n),
           B = sum(n * 0.00001 * length^3))
 # add zero station
 rbys <-
   rbys |>
-  expand(nesting(id, year, lon, lat), latin) |>
+  expand(nesting(survey, id, year, lon, lat), latin) |>
   # get back N and B
   left_join(rbys) |>
   mutate(N = replace_na(N, 0),
@@ -198,7 +202,7 @@ print("Bootstrapping abundance:")
 
 boot.N <-
   rbys |>
-  dplyr::group_by(latin, year) %>%
+  dplyr::group_by(survey, latin, year) %>%
   dplyr::do(my_boot(.$N)) %>%
   dplyr::mutate(variable = "N",
                 var = as.character(variable))
@@ -207,7 +211,7 @@ print("Bootstrapping biomass:")
 
 boot.B <-
   rbys %>%
-  dplyr::group_by(latin, year) %>%
+  dplyr::group_by(survey, latin, year) %>%
   dplyr::do(my_boot(.$B)) %>%
   dplyr::mutate(variable = "B",
                 var = as.character(var))
@@ -226,12 +230,13 @@ boot <-
 glyph <-
   rbys |>
   mutate(sq = geo::d2ir(lat, lon)) |>
-  group_by(year, sq, latin) |>
+  group_by(survey, year, sq, latin) |>
   summarise(N = mean(N),
             B = mean(B),
             .groups = "drop")
 glyph <-
-  expand_grid(year = (year.min - 1):(year.max + 1),
+  expand_grid(survey = unique(glyph$survey),
+              year = (year.min - 1):(year.max + 1),
               sq = unique(glyph$sq),
               latin = unique(glyph$latin)) |>
   left_join(glyph) |>
@@ -239,7 +244,7 @@ glyph <-
          B = replace_na(B, 0)) |>
   mutate(lon = geo::ir2d(sq)$lon,
          lat = geo::ir2d(sq)$lat) |>
-  group_by(year, latin) |>
+  group_by(survey, year, latin) |>
   mutate(N = ifelse(N > quantile(N, 0.975), quantile(N, 0.975), N),
          B = ifelse(B > quantile(B, 0.975), quantile(B, 0.975), B)) |>
   ungroup()
@@ -255,7 +260,7 @@ prob <-
   rbys |>
   mutate(lon = gisland::grade(lon, 1),
          lat = gisland::grade(lat, 0.5)) |>
-  group_by(latin, lon, lat) |>
+  group_by(survey, latin, lon, lat) |>
   summarise(n = n(),
             n.pos = sum(N > 0),
             p = n.pos / n * 100,
@@ -283,6 +288,6 @@ cl <-
 list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot, glyph = glyph, prob = prob, species = LATIN, cl = cl) |>
   write_rds("data-raw/nsibts-q3.rds")
 
-list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot,  glyph = glyph, prob = prob, species = LATIN, cl = cl) |>
-  write_rds("/home/ftp/pub/data/rds/nsibts-q3.rds")
+# list(rbyl = rbyl, rbl = rbl, rbys = rbys, boot = boot,  glyph = glyph, prob = prob, species = LATIN, cl = cl) |>
+#   write_rds("/home/ftp/pub/data/rds/nsibts-q3.rds")
 
